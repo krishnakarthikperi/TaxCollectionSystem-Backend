@@ -4,6 +4,7 @@ from sqlmodel import Field, Session, SQLModel, create_engine, select
 from db import SessionDep
 from auth import auth
 from objects.user import User,UserBase, UserAuthSuccess
+import data
 
 app = FastAPI()
 
@@ -62,3 +63,13 @@ def logout(
 @app.get("/")
 def read_root():
     return {"homePage"}
+
+@app.get("/houses/all")
+def getHousesByUser(
+    token: str,
+    db: SessionDep
+):
+    return data.house.getHousesByUser(
+        str,
+        db
+    )

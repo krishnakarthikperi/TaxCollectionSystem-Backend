@@ -20,7 +20,12 @@ def createAccessToken(data: dict, expiresDelta: timedelta = None):
     toEncode = data.copy()
     expire = datetime.utcnow()+(expiresDelta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     jti = str(uuid.uuid4())
-    toEncode.update({"exp":expire,"jti":jti})
+    toEncode.update(
+        {
+            "exp":expire,
+            "jti":jti
+        }
+    )
     return jwt.encode(toEncode, SECRET_KEY, algorithm=ALGORITHM)
 
 def createRefreshToken(data: dict, expiresDelta: timedelta = None):
@@ -28,13 +33,20 @@ def createRefreshToken(data: dict, expiresDelta: timedelta = None):
     expire = datetime.utcnow() + (expiresDelta or timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
-    
-def decodeToken(token: str, SECRET_KEY: str):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except JWTError:
-        return None
+
+class tokenManagement:
+    def decodeAuthToken(token: str):
+        return __decodeToken(token=token, SECRET_KEY=SECRET_KEY)
+
+    def decodeRefreshToken(token: str):
+        return __decodeToken(token=token, SECRET_KEY=REFRESH_SECRET_KEY)
+
+    def __decodeToken(token: str, SECRET_KEY: str):
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            return payload
+        except JWTError:
+            return None
 
 def authenticateUser(db: Session, username: str, password:str):
     user = db.query(User).filter(User.username == username).first()
@@ -75,8 +87,18 @@ def login(
             status_code=400, 
             detail="Incorrect username or password"
         )
+    tokenData = {
+        "sub": user.username,
+        "context":{
+            "user":{
+                "key":user.username,
+                "phone":user.phone
+            },
+            "roles":user.userRole
+        }        
+    }
     accessToken = createAccessToken(
-        {"sub": user.username}, 
+        tokenData, 
         timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     refreshToken = createRefreshToken(
@@ -114,7 +136,7 @@ def refreshToken(
         refreshToken: str,
         db: Session = Depends(SessionDep)
     ):
-    payload = decodeToken(refreshToken, REFRESH_SECRET_KEY)
+    payload = tokenManagement.decodeRefreshToken(token=refreshToken)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
     
@@ -129,19 +151,17 @@ def logout(
         token: str = Depends(oauth2Scheme), 
         db: Session = Depends(SessionDep)
     ):
-    payload = decodeToken(token, SECRET_KEY)
+    payload = tokenManagement.decodeAuthToken(token=token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     jti = payload.get("jti")
     revokedToken = RevokedToken(jti=jti)
-    print("=============================")
-    print("=============================")
-    print("=============================")
-    print(payload)
-    print(revokedToken)
-    print("=============================")
-    print("=============================")
     db.add(revokedToken)
     db.commit()
     
     return {"message": "Logged out successfully"}
+
+def getCurrentAdmin(user=Depends(getCurrentUser)):
+    if user.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    return user
