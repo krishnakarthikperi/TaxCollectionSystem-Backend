@@ -12,11 +12,11 @@ engine = create_engine(sqlite_url, connect_args = connect_args, echo = True)
 def createDbAndTables():
     SQLModel.metadata.create_all(engine)
 
-def get_session():
+def getSession():
     with Session(engine) as session:
         yield session
 
 if __name__ == "__main__":
     createDbAndTables()
 
-SessionDep = Annotated[Session, Depends(get_session)]
+SessionDep = Annotated[Session, Depends(getSession)]

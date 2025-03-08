@@ -1,37 +1,31 @@
-from fastapi import APIRouter
+from typing import List
+from fastapi import APIRouter, Depends
 from auth import auth
-from db import SessionDep
 from objects.user import UserAuthSuccess
 
 router = APIRouter()
 @router.post("/login",response_model=UserAuthSuccess)
 def login(
     password: str, 
-    username: str, 
-    db: SessionDep
+    username: str
 ):
     return auth.login(
         password=password, 
-        username=username, 
-        db=db
+        username=username
     )
 
-@router.post("/token/refresh")
+@router.post("/token/refresh", dependencies=[Depends(auth.getCurrentUser)])
 def refreshToken(
-    refreshToken: str, 
-    db: SessionDep
+    refreshToken: str
 ):
     return auth.refreshToken(
-        refreshToken=refreshToken,
-        db=db
+        refreshToken=refreshToken
     )
 
-@router.post("/logout")
+@router.post("/logout", dependencies=[Depends(auth.getCurrentUser)])
 def logout(
-    token: str, 
-    db: SessionDep
+    token: str
 ):
     return auth.logout(
-        token=token,
-        db=db
+        token=token
     )

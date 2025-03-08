@@ -1,28 +1,24 @@
 from typing import List
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from auth.auth import getCurrentUser
 import controller.house as controller
 from objects.house import House, HouseGETRequest, HousePOSTRequest
-from db import SessionDep
 
 router = APIRouter()
 
-@router.post("/house", response_model=HousePOSTRequest)
+@router.post("/house", response_model=HousePOSTRequest, dependencies=[Depends(getCurrentUser)])
 def createHouse(
-        house: HousePOSTRequest,
-        db: SessionDep
+        house: HousePOSTRequest
 ):
     house = House(**house.model_dump())
-    return controller.createHouse(house=house,db=db)
+    return controller.createHouse(house=house)
 
-@router.get("/households", response_model=List[HouseGETRequest])
-def getHouses(
-    db: SessionDep
-):
-    return controller.getHouses(db=db)    
+@router.get("/households", response_model=List[HouseGETRequest], dependencies=[Depends(getCurrentUser)])
+def getHouses():
+    return controller.getHouses()
 
-@router.get("/households/{household_id}", response_model=HouseGETRequest)
+@router.get("/households/{household_id}", response_model=HouseGETRequest, dependencies=[Depends(getCurrentUser)])
 def getHousesByHouseNumber(
-    house: HouseGETRequest,
-    db: SessionDep
+    house: HouseGETRequest
 ):
-    return controller.getHousesByHouseNumber(house=house,db=db)
+    return controller.getHousesByHouseNumber(house=house)
