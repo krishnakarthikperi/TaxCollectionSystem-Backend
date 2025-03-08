@@ -1,11 +1,13 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 from sqlmodel import Field, Session, SQLModel, create_engine, select, Relationship
-# from objects.assignment import Assignment
+
+if TYPE_CHECKING:
+    from objects.assignment import Assignment
 
 class HouseBase(SQLModel):
     pass
 
-class House(HouseBase, table= True):
+class HousePOSTRequest(HouseBase):
     assessmentNumber: int = Field(
         index = True,
         unique = True,
@@ -25,11 +27,9 @@ class House(HouseBase, table= True):
     ownerName: str | None = Field(
         index = True
     )
-    # volunteerAssignments: List[Assignment] = Relationship(back_populates="house")
 
-class HousePOST(House):
-    pass
+class House(HousePOSTRequest, table = True):
+    collectorAssignments: List["Assignment"] = Relationship(back_populates="house")
 
-class HouseGET(HouseBase):
+class HouseGETRequest(HouseBase):
     houseNumber: str
-    pass

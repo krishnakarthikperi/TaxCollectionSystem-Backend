@@ -1,7 +1,9 @@
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import Field, Session, SQLModel, create_engine, select, Relationship
-from .house import House
-from .user import User as user
+
+if TYPE_CHECKING:
+    from .house import House
+    from .user import User
 
 class AssignmentBase(SQLModel):
     houseId : int = Field(foreign_key = "house.houseNumber")
@@ -9,11 +11,11 @@ class AssignmentBase(SQLModel):
 
 class Assignment(AssignmentBase,table = True):
     id : int = Field(primary_key = True)
-    # volunteer: Optional[user] = Relationship(back_populates="assignments")
-    # house: Optional[House] = Relationship(back_populates="volunteerAssignments")
+    user: Optional["User"] = Relationship(back_populates="assignments")
+    house: Optional["House"] = Relationship(back_populates="collectorAssignments")
 
-class assignmentPOST(AssignmentBase):
+class assignmentPOSTRequest(AssignmentBase):
     pass
 
-class assignmentGET(AssignmentBase):
+class assignmentGETRequest(AssignmentBase):
     pass

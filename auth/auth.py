@@ -35,11 +35,11 @@ def createRefreshToken(data: dict, expiresDelta: timedelta = None):
     return jwt.encode(to_encode, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
 
 class tokenManagement:
-    def decodeAuthToken(token: str):
-        return __decodeToken(token=token, SECRET_KEY=SECRET_KEY)
+    def decodeAuthToken(self, token: str):
+        return self.__decodeToken(token=token, SECRET_KEY=SECRET_KEY)
 
-    def decodeRefreshToken(token: str):
-        return __decodeToken(token=token, SECRET_KEY=REFRESH_SECRET_KEY)
+    def decodeRefreshToken(self, token: str):
+        return self.__decodeToken(token=token, SECRET_KEY=REFRESH_SECRET_KEY)
 
     def __decodeToken(token: str, SECRET_KEY: str):
         try:

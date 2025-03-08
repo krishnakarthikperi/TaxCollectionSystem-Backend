@@ -1,6 +1,6 @@
 from sqlmodel import Field, Session, SQLModel, create_engine, select
-from .house import House
-from .user import User
+from .house import House as house
+from .user import User as user
 import datetime
 
 class TaxRecordBase(SQLModel):
@@ -8,16 +8,16 @@ class TaxRecordBase(SQLModel):
 
 class TaxRecord(TaxRecordBase,table = True):
     id : int = Field(primary_key = True)
-    houseId : int = Field(foreign_key = "House.houseNumber")
-    collectorId : int = Field(foreign_key = "User.username")
+    houseId : int = Field(foreign_key = "house.houseNumber")
+    collectorId : int = Field(foreign_key = "user.username")
     date : datetime.datetime | None = Field(default=datetime.datetime.utcnow)
 
-class TaxRecordGET(TaxRecordBase):
+class TaxRecordGETRequest(TaxRecordBase):
     id: int
     houseId: int
     collectorId: int
-    date: datetime
+    date: datetime.datetime
 
-class TaxRecordPOST(TaxRecordBase):
+class TaxRecordPOSTRequest(TaxRecordBase):
     collectorId: int
-    date: datetime
+    date: datetime.datetime
