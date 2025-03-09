@@ -1,6 +1,5 @@
 from fastapi import Depends
 from sqlmodel import Session
-from auth.auth import tokenManagement
 from db import SessionDep, getSession
 from objects.house import House, HousePOSTRequest, HouseGETRequest
 from objects.taxrecord import TaxRecord

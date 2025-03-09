@@ -9,6 +9,7 @@ import service.assignment
 import service.auth
 import service.house
 import service.taxrecord
+import service.user
 
 app = FastAPI()
 
@@ -24,6 +25,7 @@ app.include_router(service.assignment.router)
 app.include_router(service.house.router)
 app.include_router(service.taxrecord.router)
 app.include_router(service.auth.router)
+app.include_router(service.user.router)
 
 # @app.on_event("startup")
 # def on_startup():

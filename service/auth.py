@@ -1,31 +1,39 @@
-from typing import List
+from typing import Annotated, List
 from fastapi import APIRouter, Depends
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import Session
 from auth import auth
+from db import getSession
 from objects.user import UserAuthSuccess
+from auth.auth import oauth2Scheme
 
 router = APIRouter()
-@router.post("/login",response_model=UserAuthSuccess)
+@router.post("/token",response_model=UserAuthSuccess)
 def login(
-    password: str, 
-    username: str
+        formData: Annotated[OAuth2PasswordRequestForm, Depends()],
+        db: Session = Depends(getSession)
 ):
     return auth.login(
-        password=password, 
-        username=username
+        formData=formData,
+        db=db
     )
 
 @router.post("/token/refresh", dependencies=[Depends(auth.getCurrentUser)])
 def refreshToken(
-    refreshToken: str
+    refreshToken: str,
+    db: Session = Depends(getSession)
 ):
     return auth.refreshToken(
-        refreshToken=refreshToken
+        refreshToken=refreshToken,
+        db=db
     )
 
 @router.post("/logout", dependencies=[Depends(auth.getCurrentUser)])
 def logout(
-    token: str
+    token: str = Depends(oauth2Scheme), 
+    db: Session = Depends(getSession)
 ):
     return auth.logout(
-        token=token
+        token=token,
+        db=db
     )

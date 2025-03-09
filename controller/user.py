@@ -1,7 +1,7 @@
 from fastapi import Depends
 from sqlmodel import Session
 from auth.authcheck import hashPassword
-from db import getSession
+from db import SessionDep, getSession
 from objects.user import User
 
 def getUserByUsername(

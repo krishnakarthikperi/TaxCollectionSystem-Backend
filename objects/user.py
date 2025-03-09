@@ -21,6 +21,6 @@ class User(UserBase, table=True):
     assignments: List["Assignment"] = Relationship(back_populates="user")
 
 class UserAuthSuccess(UserBase):
-    accessToken: str
-    refreshToken: str
-    tokenType:str = "bearer"  
+    access_token: str
+    refresh_token: str
+    token_type:str = "Bearer"  

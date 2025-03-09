@@ -4,7 +4,7 @@ from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from db import SessionDep
+from db import SessionDep, getSession
 from objects.tokens import RevokedToken
 from objects.user import User,UserAuthSuccess
 from .authcheck import verifyPassword, hashPassword
@@ -19,8 +19,9 @@ import controller.token as TokenController
 
 oauth2Scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-class tokenManagement:
+class TokenManagement:
     def __encodeToken(
+            self,
             payload: dict, 
             SECRET_KEY: str, 
             expiresDelta: timedelta = None
@@ -36,13 +37,13 @@ class tokenManagement:
         )
         return jwt.encode(toEncode, SECRET_KEY, algorithm=ALGORITHM)        
 
-    def encodeAuthToken(self, payload:str, expiresDelta: timedelta = None):
+    def encodeAuthToken(self,payload:dict, expiresDelta: timedelta = None):
         return self.__encodeToken(payload=payload,SECRET_KEY = ACCESS_SECRET_KEY, expiresDelta = expiresDelta)
 
-    def encodeRefreshToken(self, payload:str, expiresDelta: timedelta = None):
+    def encodeRefreshToken(self,payload:dict, expiresDelta: timedelta = None):
         return self.__encodeToken(payload=payload,SECRET_KEY = REFRESH_SECRET_KEY, expiresDelta = expiresDelta)
 
-    def __decodeToken(token: str, SECRET_KEY: str):
+    def __decodeToken(self, token: str, SECRET_KEY: str):
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             return payload
@@ -58,15 +59,17 @@ class tokenManagement:
 
 def authenticateUser(
         username: str, 
-        password:str
+        password:str,
+        db: Session = Depends(getSession)
     ):
-    user =  UserController.getUserByUsername(username=username)
+    user =  UserController.getUserByUsername(username=username, db=db)
     if user and verifyPassword(password,user.password):
         return user
     return None
 
 def getCurrentUser(
-        token: str = Depends(oauth2Scheme) 
+        token: str = Depends(oauth2Scheme),
+        db: Session = Depends(getSession)
     ):
     credentialsException = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -74,7 +77,7 @@ def getCurrentUser(
         headers={"WWW-Authenticate": "Bearer"}
     )
     try:
-        payload = tokenManagement.decodeAuthToken(token)
+        payload = TokenManagement().decodeAuthToken(token=token)
         username: str = payload.get("sub")
         exp: int = payload.get("exp")
         # Check if token has expired
@@ -84,19 +87,21 @@ def getCurrentUser(
             raise credentialsException
     except JWTError:
         raise credentialsException
-    user =  UserController.getUserByUsername(username=username)
+    user =  UserController.getUserByUsername(username=username,db=db)
     if user is None:
         raise credentialsException
     return user
 
 def login(
-        formData: Annotated[OAuth2PasswordRequestForm, Depends()]
+        formData: Annotated[OAuth2PasswordRequestForm, Depends()],
+        db: Session = Depends(getSession)
         # password: str, 
         # username: str 
     ):
     user = authenticateUser(
-        formData.username, 
-        formData.password
+        username=formData.username, 
+        password=formData.password,
+        db=db
     )
     if not user:
         raise HTTPException(
@@ -114,40 +119,42 @@ def login(
             "roles":user.userRole
         }        
     }
-    accessToken = tokenManagement.encodeAuthToken(
+    accessToken = TokenManagement().encodeAuthToken(
         payload = tokenData, 
-        timedelta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expiresDelta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    refreshToken = tokenManagement.encodeRefreshToken(
+    refreshToken = TokenManagement().encodeRefreshToken(
         payload = {"sub": user.username}, 
-        timedelta = timedelta(minutes=REFRESH_TOKEN_EXPIRE_DAYS)
+        expiresDelta = timedelta(minutes=REFRESH_TOKEN_EXPIRE_DAYS)
     )
     authDetails = UserAuthSuccess(
         username=user.username,
         name=user.name,
-        accessToken= accessToken,
+        access_token= accessToken,
         phone = user.phone,
-        refreshToken = refreshToken
+        refresh_token = refreshToken,
+        userRole = user.userRole
     )
     return authDetails
 
 def refreshToken(
         refreshToken: str,
+        db: Session = Depends(getSession)
     ):
-    payload = tokenManagement.decodeRefreshToken(token=refreshToken)
+    payload = TokenManagement().decodeRefreshToken(token=refreshToken)
     if not payload:
         raise HTTPException(
             status_code=401, 
             detail="Invalid refresh token"
         )    
     username: str = payload.get("sub")
-    user =  UserController.getUserByUsername(username=username)
+    user =  UserController.getUserByUsername(username=username, db=db)
     if not user:
         raise HTTPException(
             status_code=401, 
             detail="User not found"
         )
-    newAccessToken = tokenManagement.encodeAuthToken(
+    newAccessToken = TokenManagement().encodeAuthToken(
         {
             "sub": user.username
         }, 
@@ -159,12 +166,12 @@ def logout(
         token: str = Depends(oauth2Scheme), 
         db: Session = Depends(SessionDep)
     ):
-    payload = tokenManagement.decodeAuthToken(token=token)
+    payload = TokenManagement().decodeAuthToken(token=token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     jti = payload.get("jti")
     revokedToken = RevokedToken(jti=jti)
-    token = TokenController.addToken(token=revokedToken)   
+    token = TokenController.addToken(token=revokedToken,db=db)   
     return {"message": "Logged out successfully"}
 
 def getCurrentAdmin(user=Depends(getCurrentUser)):
