@@ -1,9 +1,8 @@
 from sqlmodel import Session, select
-from objects.taxrecord import TaxRecordPOSTRequest, TaxRecord, TaxRecordGETRequest
-from objects.assignment import Assignment
-from db import SessionDep, getSession
+from objects.taxrecord import TaxRecordPOSTRequest, TaxRecord
+from db import getSession
 from auth.auth import getCurrentAdmin
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 
 def insertTaxRecord(
         taxRecord : TaxRecordPOSTRequest,

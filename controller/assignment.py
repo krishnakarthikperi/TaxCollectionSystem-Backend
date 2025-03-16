@@ -1,12 +1,11 @@
 from sqlmodel import Session, select
-from db import SessionDep, getSession
-from fastapi import Depends, HTTPException
-from objects.assignment import Assignment, assignmentGETRequest, assignmentPOSTRequest
-from objects.user import User
+from db import getSession
+from fastapi import Depends
+from objects.assignment import Assignment, AssignmentPOSTRequest
 from objects.house import House
 
 def assignVolunteer(
-        assignment: assignmentPOSTRequest,
+        assignment: AssignmentPOSTRequest,
         db: Session = Depends(getSession)
 ):  
     db.add(assignment)

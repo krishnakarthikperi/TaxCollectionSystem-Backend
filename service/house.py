@@ -4,27 +4,29 @@ from sqlmodel import Session
 from auth.auth import getCurrentUser
 import controller.house as controller
 from db import getSession
-from objects.house import House, HouseGETRequest, HousePOSTRequest
+from objects.house import House, HouseGETRequest, HouseGETResponse, HousePOSTRequest
 
 router = APIRouter()
 
-@router.post("/house", response_model=HousePOSTRequest, dependencies=[Depends(getCurrentUser)])
-def createHouse(
-        house: HousePOSTRequest,
+@router.post("/house", response_model=List[HousePOSTRequest], dependencies=[Depends(getCurrentUser)])
+def createHouses(
+        houses: List[HousePOSTRequest],
         db: Session = Depends(getSession)
 ):
-    house = House(**house.model_dump())
-    return controller.createHouse(house=house, db=db)
+    newHouses = [House(**house.model_dump()) for house in houses]
+    return controller.createHouses(houses=newHouses, db=db)
 
-@router.get("/households", response_model=List[HouseGETRequest], dependencies=[Depends(getCurrentUser)])
+@router.get("/households", response_model=List[HouseGETResponse], dependencies=[Depends(getCurrentUser)])
 def getHouses(
     db: Session = Depends(getSession)
 ):
     return controller.getHouses(db=db)
 
-@router.get("/households/{household_id}", response_model=HouseGETRequest, dependencies=[Depends(getCurrentUser)])
+@router.get("/households/{household_id}", response_model=List[HouseGETResponse], dependencies=[Depends(getCurrentUser)])
 def getHousesByHouseNumber(
-    house: HouseGETRequest,
+    household_id: str,
     db: Session = Depends(getSession)
 ):
-    return controller.getHousesByHouseNumber(house=house, db=db)
+    houses = [HouseGETRequest(houseNumber=household_id)]
+    houseNumbers = [house.houseNumber for house in houses]
+    return controller.getHousesByHouseNumbers(houseNumbers=houseNumbers, db=db)

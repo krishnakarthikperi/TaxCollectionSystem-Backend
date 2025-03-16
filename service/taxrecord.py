@@ -1,13 +1,13 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
-from auth.auth import getCurrentAdmin, getCurrentUser
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session
+from auth.auth import getCurrentUser
 from constants import USER_ROLE_ADMIN, USER_ROLE_COLLECOTR
 import controller.taxrecord as controller
 import controller.assignment as AssignmentController
 from db import getSession
-from objects.assignment import Assignment
-from objects.taxrecord import TaxRecord, TaxRecordGETRequest, TaxRecordPOSTRequest
+from objects.taxrecord import TaxRecordGETRequest, TaxRecordPOSTRequest
+import service.constants as constants
 
 router = APIRouter()
 
@@ -19,7 +19,10 @@ def insertTaxRecord(
 ):
     # Ensure user is a collector
     if USER_ROLE_COLLECOTR not in user.userRole.split(','):
-        raise HTTPException(status_code=403, detail="Only collectors can record tax collection")
+        raise HTTPException(
+            status_code= status.HTTP_403_FORBIDDEN, 
+            detail = constants.ONLY_COLLECTORS_RECORD_TAX_COLLECTION
+        )
 
     # Ensure collector is assigned to this household
     assignment = AssignmentController.getAssignmentsByUsernameAndHouseNumber(
@@ -28,8 +31,10 @@ def insertTaxRecord(
         db=db
     ) 
     if not assignment:
-        raise HTTPException(status_code=403, detail="You are not assigned to this household")
-    
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail = constants.INCORRECT_HOUSE_MAPPING
+        )    
     taxRecord = TaxRecordPOSTRequest(collectorId=user.id, **taxData.model_dump())
     return controller.insertTaxRecord(taxRecord=taxRecord, db=db)
 
@@ -56,9 +61,15 @@ def updateTaxRecordById(
         db=db
     )
     if not taxRecord:
-        raise HTTPException(status_code=404, detail="Tax record not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail = constants.RECORD_NOT_FOUND
+        )
     if user.userRole != USER_ROLE_ADMIN and user.username != taxRecord.collectorId:
-        raise HTTPException(status_code=401, detail="Unauthorized edit")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail=constants.INSUFFICIENT_PERMISSIONS
+        )
 
     if updateData.amount is not None:
         taxRecord.amount = updateData.amount

@@ -6,16 +6,22 @@ if TYPE_CHECKING:
     from .user import User
 
 class AssignmentBase(SQLModel):
-    houseId : int = Field(foreign_key = "house.houseNumber")
-    username : int = Field(foreign_key = "user.username")
+    houseId : str = Field(foreign_key = "house.houseNumber")
+    username : str = Field(foreign_key = "user.username")
 
 class Assignment(AssignmentBase,table = True):
     id : int = Field(primary_key = True)
     user: Optional["User"] = Relationship(back_populates="assignments")
     house: Optional["House"] = Relationship(back_populates="collectorAssignments")
 
-class assignmentPOSTRequest(AssignmentBase):
+class AssignmentPOSTRequest(AssignmentBase):
     pass
 
-class assignmentGETRequest(AssignmentBase):
+class AssignmentPOSTResponse(AssignmentBase):
+    pass
+
+class AssignmentGETRequest(AssignmentBase):
+    pass
+
+class AssignmentGETResponse(AssignmentBase):
     pass
