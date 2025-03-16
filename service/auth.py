@@ -6,6 +6,7 @@ from auth import auth
 from db import getSession
 from objects.user import UserAuthSuccess
 from auth.auth import oauth2Scheme
+from objects.tokens import RefreshTokenPOSTRequest
 
 router = APIRouter()
 @router.post("/token",response_model=UserAuthSuccess)
@@ -18,9 +19,9 @@ def login(
         db=db
     )
 
-@router.post("/token/refresh", dependencies=[Depends(auth.getCurrentUser)])
+@router.post("/token/refresh")
 def refreshToken(
-    refreshToken: str,
+    refreshToken: RefreshTokenPOSTRequest,
     db: Session = Depends(getSession)
 ):
     return auth.refreshToken(
