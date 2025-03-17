@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
-from auth.auth import getCurrentUser
+from auth.auth import getCurrentAdmin, getCurrentUser
 import controller.assignment as controller
 import controller.user as UserController
 import controller.house as HouseController
@@ -13,7 +13,7 @@ import service.constants as constants
 
 router = APIRouter()
 
-@router.post("/assign-collector", response_model=AssignmentPOSTRequest, dependencies=[Depends(getCurrentUser)])
+@router.post("/assign-collector", response_model=AssignmentPOSTRequest, dependencies=[Depends(getCurrentAdmin)])
 def assignVolunteer(
         assignment: AssignmentPOSTRequest,
         db: Session = Depends(getSession)
@@ -24,8 +24,8 @@ def assignVolunteer(
             status_code = status.HTTP_400_BAD_REQUEST,
             detail = constants.INVALID_VOLUNTEER_DETAILS
         )
-    house = HouseController.getHousesByHouseNumber(HouseGETRequest(houseNumber=assignment.houseId))
-    if not house:
+    houses = HouseController.getHousesByHouseNumbers(houseNumbers=[assignment.houseId],db=db)
+    if not houses:
         raise HTTPException(
             status_code = status.HTTP_400_BAD_REQUEST,
             detail = constants.INVALID_HOUSE_NUMBER
