@@ -1,0 +1,20 @@
+# Black - Code Formatter
+[tool.black]
+line-length = 88  # Adjust as needed
+target-version = ['py311']  # Set to your Python version
+skip-string-normalization = false  # Keep consistent quotes
+
+# Ruff - Linter & Formatter
+[tool.ruff]
+line-length = 88  # Match Black's line length
+target-version = "py311"  # Match Python version
+extend-select = ["I"]  # Auto-format imports
+
+[tool.ruff.format]
+quote-style = "double"  # Enforce double quotes for strings
+indent-style = "space"  # Ensure indentation with spaces
+line-ending = "lf"  # Use Unix-style line endings
+
+# Ruff Fixes
+[tool.ruff.lint]
+fixable = ["ALL"]  # Auto-fix all issues

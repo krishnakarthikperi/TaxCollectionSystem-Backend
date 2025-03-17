@@ -52,7 +52,16 @@ def authenticate(client:TestClient, session:Session, username:str, password:str)
     return response
 
 
-def test_insertTaxRecord_success(client: TestClient, session: Session):
+def test_insertTaxRecord_success(
+    client: TestClient,
+    session: Session,
+):
+    """
+    GIVEN an authenticated collector user and a valid session,
+    WHEN the collector sends a POST request to insert a tax record with valid data,
+    THEN the API should return a 200 status code and the response should contain the inserted tax record
+        with the correct house ID and amount.
+    """
     # Authenticate as a collector
     response = authenticate(client=client, session=session, username="collector", password="collector")
     access_token = response.json()["access_token"]
@@ -77,7 +86,14 @@ def test_insertTaxRecord_success(client: TestClient, session: Session):
     assert json_response["amount"] == 5000.0
 
 
-def test_insertTaxRecord_unauthorized(client: TestClient):
+def test_insertTaxRecord_unauthorized(
+    client: TestClient,
+):
+    """
+    GIVEN an unauthenticated client attempting to access the tax record insertion endpoint,
+    WHEN the client sends a POST request to the "/recordcollections" endpoint with a tax record payload,
+    THEN the server should respond with a 401 Unauthorized status code, indicating that authentication is required.
+    """
     # Attempt to insert a tax record without authentication
     response = client.post(
         "/recordcollections",
@@ -92,7 +108,16 @@ def test_insertTaxRecord_unauthorized(client: TestClient):
     )
     assert response.status_code == 401
 
-def test_insertTaxRecord_forbidden(client: TestClient, session: Session):
+
+def test_insertTaxRecord_forbidden(
+    client: TestClient,
+    session: Session,
+):
+    """
+    GIVEN a non-collector user is authenticated and attempts to perform an action restricted to collectors,
+    WHEN the user tries to insert a tax record into the system,
+    THEN the system should respond with a 403 Forbidden status code and an error message indicating incorrect house mapping.
+    """
     # Authenticate as a non-collector user
     newCollector = createUserData(username="collector2", password="collector2", name="C2", userRole=USER_ROLE_COLLECTOR, phone=1234567890)
     session.add(newCollector)
@@ -116,7 +141,16 @@ def test_insertTaxRecord_forbidden(client: TestClient, session: Session):
     assert response.status_code == 403
     assert constants.INCORRECT_HOUSE_MAPPING in response.text
 
-def test_getTaxRecords_success(client: TestClient, session: Session):
+
+def test_getTaxRecords_success(
+    client: TestClient,
+    session: Session,
+):
+    """
+    GIVEN an authenticated user with valid credentials
+    WHEN the user sends a GET request to the '/gettaxrecords' endpoint with a valid access token
+    THEN the response should have a status code of 200 and return a list of tax records
+    """
     # Authenticate as a user
     response = authenticate(client=client, session=session, username="admin", password="admin")
     access_token = response.json()["access_token"]
@@ -129,7 +163,16 @@ def test_getTaxRecords_success(client: TestClient, session: Session):
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
-def test_admin_updateTaxRecordById_success(client: TestClient, session: Session):
+
+def test_admin_updateTaxRecordById_success(
+    client: TestClient,
+    session: Session,
+):
+    """
+    GIVEN an authenticated admin user and a tax record with ID 1 in the database
+    WHEN the admin sends a PUT request to update the tax record's amount to 6000.0
+    THEN the response status code should be 200, and the updated tax record should reflect the new amount
+    """
     # Authenticate as an admin
     response = authenticate(client=client, session=session, username="admin", password="admin")
     access_token = response.json()["access_token"]
@@ -146,7 +189,17 @@ def test_admin_updateTaxRecordById_success(client: TestClient, session: Session)
     json_response = response.json()
     assert json_response["amount"] == 6000.0
 
-def test_assignedcollector_updateTaxRecordById_success(client: TestClient, session: Session):
+
+def test_assignedcollector_updateTaxRecordById_success(
+    client: TestClient,
+    session: Session,
+):
+    """
+    Test the successful update of a tax record by an assigned collector.
+    GIVEN an authenticated assigned collector with valid credentials
+    WHEN the collector sends a PUT request to update the tax record with a new amount
+    THEN the response should have a status code of 200, and the tax record's amount should be updated successfully
+    """
     # Authenticate as an assigned collector
     response = authenticate(client=client, session=session, username="collector", password="collector")
     access_token = response.json()["access_token"]
@@ -163,7 +216,17 @@ def test_assignedcollector_updateTaxRecordById_success(client: TestClient, sessi
     json_response = response.json()
     assert json_response["amount"] == 6000.0
 
-def test_unassignedcollector_updateTaxRecordById_success(client: TestClient, session: Session):
+
+def test_unassignedcollector_updateTaxRecordById_success(
+    client: TestClient,
+    session: Session,
+):
+    """
+    Test case for updating a tax record by an unassigned collector.
+    GIVEN an unassigned collector who is authenticated in the system
+    WHEN the collector attempts to update a tax record by sending a PUT request with the updated data
+    THEN the request should be denied with a 401 Unauthorized status code, as the collector does not have the necessary permissions.
+    """
     # Authenticate as an unassigned collector
     newCollector = createUserData(username="collector2", password="collector2", name="C2", userRole=USER_ROLE_COLLECTOR, phone=1234567890)
     session.add(newCollector)
@@ -181,7 +244,18 @@ def test_unassignedcollector_updateTaxRecordById_success(client: TestClient, ses
     )
     assert response.status_code == 401
 
-def test_updateTaxRecordById_not_found(client: TestClient, session: Session):
+
+def test_updateTaxRecordById_not_found(
+    client: TestClient,
+    session: Session,
+):
+    def test_updateTaxRecordById_not_found(client: TestClient, session: Session):
+        """
+        GIVEN an authenticated admin user and a non-existent tax record ID
+        WHEN the admin attempts to update the tax record with the specified ID
+        THEN the server should respond with a 404 status code and an appropriate error message indicating that the record was not found
+        """
+
     # Authenticate as an admin
     response = authenticate(client=client, session=session, username="admin", password="admin")
     access_token = response.json()["access_token"]

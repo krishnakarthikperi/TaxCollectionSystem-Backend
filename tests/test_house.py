@@ -30,83 +30,30 @@ Functions:
 from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine
-from sqlmodel.pool import StaticPool
+from sqlmodel import Session
 from auth.authcheck import hashPassword
 from main import app
-from db import getSession
+from tests.conftest import createTestData
 
-def createTestData(session: Session):
-    from objects.house import House
-    house1 = House(
-        assessmentNumber=1,
-        houseNumber="1",
-        houseValue=1000000.0,
-        houseTax=10000.0,
-        waterTax=1000.0,
-        libraryTax=100.0,
-        lightingTax=100.0,
-        drianageTax=100.0,
-        husbandOrFatherNameOfOwner="John Doe",
-        ownerName="Jane Doe"
-    )
-    house2 = House(
-        assessmentNumber=2,
-        houseNumber="2",
-        houseValue=2000000.0,
-        houseTax=20000.0,
-        waterTax=2000.0,
-        libraryTax=200.0,
-        lightingTax=200.0,
-        drianageTax=200.0,
-        husbandOrFatherNameOfOwner="John Doe II",
-        ownerName="Jane Doe II"
-    )
-    session.add_all([house1, house2])
-    session.commit()
-    # Verify data creation
-    # print("Houses in DB:", session.query(House).all())
 
-    # Create User
-    from objects.user import User
-    adminUser = User(
-        username="admin",
-        password=hashPassword("admin"),
-        name="Admin",
-        userRole="admin",
-        phone=1234567890
-    )
-    collectorUser = User(
-        username="collector",
-        password=hashPassword("collector"),
-        name="Collector",
-        userRole="collector",
-        phone=1234567890
-    )
-    session.add_all([adminUser, collectorUser])
-    session.commit()
+def authenticate(
+    client: TestClient,
+    session: Session,
+    username: str,
+    password: str,
+):
+    """
+    Authenticates a user by sending a POST request to the /token endpoint with the provided credentials.
 
-    #Create Assignment
-    from objects.assignment import Assignment
-    assignment1 = Assignment(
-        houseId=1,
-        username="collector"
-    )
-    session.add(assignment1)
-    session.commit()
+    Args:
+        client (TestClient): The test client used to send HTTP requests.
+        session (Session): The database session used to create test data.
+        username (str): The username of the user to authenticate.
+        password (str): The password of the user to authenticate.
 
-    #Create Taxrecord
-    from objects.taxrecord import TaxRecord
-    taxRecord1 = TaxRecord(
-        amount=1000.0,
-        houseId=1,
-        collectorId="collector",
-        date=datetime.now(timezone.utc)
-    )
-    session.add(taxRecord1)
-    session.commit()
-
-def authenticate(client:TestClient, session:Session, username:str, password:str):
+    Returns:
+        Response: The response object from the POST request to the /token endpoint.
+    """
     createTestData(session)
     response = client.post(
         "/token",
@@ -114,14 +61,38 @@ def authenticate(client:TestClient, session:Session, username:str, password:str)
     )
     return response
 
-def test_login(client:TestClient, session:Session):
+
+def test_login(
+    client: TestClient,
+    session: Session,
+):
+    """
+    GIVEN a TestClient instance and a database session
+    WHEN the authenticate function is called with valid credentials (username="admin", password="admin")
+    THEN the response should have a status code of 200, contain an "access_token" in the JSON response,
+        and the "token_type" should be "Bearer".
+    """
     response = authenticate(client=client, session=session, username="admin", password="admin")
     assert response.status_code == 200
     json_response = response.json()
     assert "access_token" in json_response
     assert json_response["token_type"] == "Bearer"
 
-def test_createHouse(client:TestClient,session:Session):
+
+def test_createHouse(
+    client: TestClient,
+    session: Session,
+):
+    def test_createHouse(client: TestClient, session: Session):
+        """
+        GIVEN a valid authenticated user with the necessary permissions
+              and a valid payload for creating a house record.
+        WHEN the user sends a POST request to the '/house' endpoint with the payload
+             and a valid access token in the Authorization header.
+        THEN the server should respond with a status code of 200,
+             and the response should contain the created house record with the correct details.
+        """
+
     response = authenticate(client=client, session=session, username="admin", password="admin")
     access_token = response.json()["access_token"]
     response = client.post(
@@ -157,7 +128,28 @@ def test_createHouse(client:TestClient,session:Session):
     assert json_response["husbandOrFatherNameOfOwner"] == "John Doe III"
     assert json_response["ownerName"] == "Jane Doe III"
 
-def test_getHouseByHouseNumber(client:TestClient,session:Session):
+
+def test_getHouseByHouseNumber(
+    client: TestClient,
+    session: Session,
+):
+    """
+    Test the `getHouseByHouseNumber` endpoint.
+
+    GIVEN a valid TestClient and database session, and an authenticated user with the username "admin" and password "admin",
+    WHEN the user sends a GET request to the `/households/1` endpoint with a valid access token,
+    THEN the response should have a status code of 200, and the JSON response should contain the details of the house with:
+        - assessmentNumber: 1
+        - houseNumber: "1"
+        - houseValue: 1000000.0
+        - houseTax: 10000.0
+        - waterTax: 1000.0
+        - libraryTax: 100.0
+        - lightingTax: 100.0
+        - drianageTax: 100.0
+        - husbandOrFatherNameOfOwner: "John Doe"
+        - ownerName: "Jane Doe"
+    """
     response = authenticate(client=client, session=session, username="admin", password="admin")
     access_token = response.json()["access_token"]
     response = client.get(
@@ -179,7 +171,19 @@ def test_getHouseByHouseNumber(client:TestClient,session:Session):
     assert json_response["husbandOrFatherNameOfOwner"] == "John Doe"
     assert json_response["ownerName"] == "Jane Doe"    
 
-def test_getHouses(client:TestClient,session:Session):
+
+def test_getHouses(
+    client: TestClient,
+    session: Session,
+):
+    """
+    Test the `GET /households` endpoint.
+
+    GIVEN a valid authenticated user with the necessary permissions
+    WHEN the user sends a GET request to the `/households` endpoint
+    THEN the response should return a status code of 200 and a list of households with the correct details,
+        including assessment number, house number, house value, taxes, and owner information.
+    """
     response = authenticate(client=client, session=session, username="admin", password="admin")
     access_token = response.json()["access_token"]
     response = client.get(
@@ -201,7 +205,18 @@ def test_getHouses(client:TestClient,session:Session):
     assert json_response["husbandOrFatherNameOfOwner"] == "John Doe"
     assert json_response["ownerName"] == "Jane Doe"    
 
-def test_createHouses_success(client: TestClient, session: Session):
+
+def test_createHouses_success(
+    client: TestClient,
+    session: Session,
+):
+    """
+    GIVEN a TestClient and a database session with an authenticated user
+    WHEN the client sends a POST request to the '/house' endpoint with a list of house details
+        and a valid access token in the headers
+    THEN the server should respond with a 200 status code and return a JSON response containing
+        the details of the created houses, matching the input data.
+    """
     response = authenticate(client=client, session=session, username="admin", password="admin")
     access_token = response.json()["access_token"]
     response = client.post(
@@ -242,7 +257,16 @@ def test_createHouses_success(client: TestClient, session: Session):
     assert json_response[1]["assessmentNumber"] == 5
     assert json_response[1]["houseNumber"] == "5"
 
-def test_createHouses_unauthorized(client: TestClient, session: Session):
+
+def test_createHouses_unauthorized(
+    client: TestClient,
+    session: Session,
+):
+    """
+    GIVEN an unauthorized client and a database session,
+    WHEN the client attempts to create a house entry by sending a POST request to the "/house" endpoint,
+    THEN the server should respond with a 401 Unauthorized status code, indicating that the client is not authorized to perform this action.
+    """
     response = client.post(
         "/house",
         json=[
@@ -262,7 +286,18 @@ def test_createHouses_unauthorized(client: TestClient, session: Session):
     )
     assert response.status_code == 401
 
-def test_createHouses_invalid_data(client: TestClient, session: Session):
+
+def test_createHouses_invalid_data(
+    client: TestClient,
+    session: Session,
+):
+    """
+    GIVEN a TestClient and a database session with an authenticated user
+    WHEN a POST request is made to the '/house' endpoint with invalid data
+        (e.g., an invalid data type for the 'assessmentNumber' field)
+    THEN the server should respond with a 422 Unprocessable Entity status code,
+         indicating that the input validation has failed.
+    """
     response = authenticate(client=client, session=session, username="admin", password="admin")
     access_token = response.json()["access_token"]
     response = client.post(
