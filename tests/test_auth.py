@@ -29,12 +29,21 @@ Functions:
 
 from fastapi.testclient import TestClient
 import pytest
+from sqlmodel import Session
 from main import app
+from tests.conftest import createTestData
 
-client = TestClient(app)
+# client = TestClient(app)
+def authenticate(client:TestClient, session:Session, username:str, password:str):
+    createTestData(session)
+    response = client.post(
+        "/token",
+        data={"username": username, "password": password, "grant_type": "password"},
+    )
+    return response
 
-
-def test_login():
+def test_login(client:TestClient, session:Session):
+    createTestData(session)
     response = client.post(
         "/token",
         data={"username": "admin", "password": "admin", "grant_type": "password"},
@@ -43,13 +52,11 @@ def test_login():
     json_response = response.json()
     assert "access_token" in json_response
     assert json_response["token_type"] == "Bearer"
-    return response
 
-
-def test_refresh_token_success():
-    token = test_login()
-    access_token = token.json()["access_token"]
-    refresh_token = token.json()["refresh_token"]
+def test_refresh_token_success(client:TestClient, session:Session):
+    response = authenticate(client=client, session=session, username="admin", password="admin")
+    access_token = response.json()["access_token"]
+    refresh_token = response.json()["refresh_token"]
     response = client.post(
         "/token/refresh",
         json={"refresh_token": refresh_token},
@@ -62,23 +69,19 @@ def test_refresh_token_success():
     assert json_response["access_token"] != access_token
 
 
-def test_refresh_token_invalid():
+def test_refresh_token_invalid(client:TestClient, session:Session):
+    createTestData(session)
     # Use an invalid refresh token
     response = client.post(
         "/token/refresh", json={"refresh_token": "invalid_refresh_token"}
     )
     json_response = response.json()
-    print("========json_response========")
-    print("========json_response========")
-    print(json_response)
-    print("========json_response========")
-    print("========json_response========")
-    print("========json_response========")
     assert response.status_code == 401
     assert json_response["detail"] == "Could not validate credentials" #Change the exception
 
 
-def test_refresh_token_missing():
+def test_refresh_token_missing(client:TestClient, session:Session):
+    createTestData(session)
     # Missing refresh token
     response = client.post("/token/refresh", json={})
     assert response.status_code == 422
@@ -86,10 +89,10 @@ def test_refresh_token_missing():
     assert json_response["detail"][0]["msg"] == "Field required"
 
 
-def test_logout_success():
+def test_logout_success(client:TestClient, session:Session):
     # First, login to get the access token
-    token = test_login()
-    access_token = token.json()["access_token"]
+    response = authenticate(client=client, session=session, username="admin", password="admin")
+    access_token = response.json()["access_token"]
 
     # Use the access token to logout
     response = client.post(
@@ -100,7 +103,8 @@ def test_logout_success():
     assert json_response["message"] == "Logged out successfully"
 
 
-def test_logout_invalid_token():
+def test_logout_invalid_token(client:TestClient, session:Session):
+    createTestData(session)
     # Attempt to logout with an invalid token
     response = client.post(
         "/logout", headers={"Authorization": "Bearer invalid_token"})
@@ -109,7 +113,8 @@ def test_logout_invalid_token():
     assert json_response["detail"] == "Could not validate credentials"
 
 
-def test_logout_missing_token():
+def test_logout_missing_token(client:TestClient, session:Session):
+    createTestData(session)
     # Attempt to logout without providing a token
     response = client.post("/logout")
     assert response.status_code == 401

@@ -19,9 +19,7 @@ class UserBase(SQLModel):
     userRole: str | None
 
 class User(UserBase, table=True):
-    password: str = Field(
-        unique=True
-    )
+    password: str
     assignments: List["Assignment"] = Relationship(back_populates="user")
     taxRecords: List["TaxRecord"] = Relationship(back_populates="collector")
 
@@ -29,6 +27,12 @@ class UserAuthSuccess(UserBase):
     access_token: str
     refresh_token: str
     token_type:str = "Bearer"  
+
+class UserPOSTRequest(UserBase):
+    password: str    
+
+class UserPOSTResponse(UserBase):
+    pass    
 
 class UserGetResponse(UserBase):
     pass

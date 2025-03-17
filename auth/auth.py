@@ -197,7 +197,7 @@ def logout(
     return {"message": LOGGED_OUT_SUCCESSFULLY}
 
 def getCurrentAdmin(user=Depends(getCurrentUser)):
-    if user.role != USER_ROLE_ADMIN:
+    if USER_ROLE_ADMIN not in user.userRole.split(","):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail=INSUFFICIENT_PERMISSIONS
