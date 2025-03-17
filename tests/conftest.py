@@ -22,18 +22,28 @@ Dependencies:
 """
 
 from datetime import datetime, timezone
+import os
+import sys
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import SQLModel, Session, create_engine
 from sqlmodel.pool import StaticPool
 from auth.authcheck import hashPassword
-from main import app
 from db import getSession
 from service.constants import USER_ROLE_ADMIN, USER_ROLE_COLLECTOR
 from objects.taxrecord import TaxRecord
 from objects.assignment import Assignment
 from objects.user import User
 from objects.house import House
+
+if getattr(sys, "frozen", False):  # Check if running inside PyInstaller
+    sys.path.append(os.path.dirname(sys.executable))
+else:
+    # Use the normal project directory
+    base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    sys.path.append(base_path)  # Add the project root to sys.path
+
+from main import app  # Import the FastAPI app
 
 @pytest.fixture(name="session")
 def session_fixture():

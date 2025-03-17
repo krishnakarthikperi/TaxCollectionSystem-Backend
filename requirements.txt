@@ -1,6 +1,12 @@
+uvicorn==0.23.2
 fastapi==0.115.11
-passlib==1.7.4
-python_jose==3.4.0
-SQLAlchemy==2.0.38
 sqlmodel==0.0.24
-bcrypt==4.3.0
+pydantic==1.10.12
+passlib==1.7.4
+bcrypt==4.0.1
+python-jose==3.3.0
+starlette==0.31.1
+httpx==0.24.1
+typing_extensions==4.8.0
+pytest==7.4.2
+sqlalchemy==2.0.20
