@@ -3,24 +3,17 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from auth.auth import getCurrentAdmin
 from db import getSession
-from objects.user import UserBase, UserBase
+from objects.user import UserPOSTRequest, UserPOSTResponse
 import controller.user as UserController
 
 router = APIRouter()
 
-# @router.post("/register",response_model=UserBase, dependencies=[Depends(getCurrentAdmin)])
-@router.post("/register",response_model=UserBase)
+@router.post("/register",response_model=UserPOSTResponse, dependencies=[Depends(getCurrentAdmin)])
 def register(
-    name:str, 
-    password: str, 
-    phone: int,
-    username: str,
+    userDetails: UserPOSTRequest,
     db: Session = Depends(getSession)
 ):
     return UserController.register(
-        name=name, 
-        password=password, 
-        phone=phone,
-        username=username,
+        userDetails = userDetails,
         db = db 
     )

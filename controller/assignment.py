@@ -1,3 +1,4 @@
+from typing import List
 from sqlmodel import Session, select
 from db import getSession
 from fastapi import Depends
@@ -20,10 +21,15 @@ def getAssignmentsByUser(
     assignments = db.exec(select(Assignment, House).where(Assignment.username == username, Assignment.houseId == House.houseNumber)).all()
     return assignments
 
-def getAssignmentsByUsernameAndHouseNumber(
+def getAssignmentsByUsernameAndHouseNumbers(
         username: str,
-        houseNumber:str,
+        houseNumbers:List[str],
         db: Session = Depends(getSession)
 ):
-    assignment = db.exec(select(Assignment, House).where(Assignment.username == username, Assignment.houseId == houseNumber)).first()
-    return assignment
+    assignments = db.exec(
+        select(Assignment)
+        .join(House, Assignment.houseId == House.houseNumber)
+        .where(Assignment.username == username)
+        .where(Assignment.houseId.in_(houseNumbers))
+    ).all()
+    return assignments

@@ -1,17 +1,20 @@
+from typing import List
 from sqlmodel import Session, select
-from objects.taxrecord import TaxRecordPOSTRequest, TaxRecord
+from objects.taxrecord import TaxRecordPOSTRequest, TaxRecord, TaxRecordPUTRequest
 from db import getSession
 from auth.auth import getCurrentAdmin
 from fastapi import Depends
 
-def insertTaxRecord(
-        taxRecord : TaxRecordPOSTRequest,
+def insertTaxRecords(
+        taxRecords : List[TaxRecordPOSTRequest],
         db: Session = Depends(getSession)
 ):
-    db.add(taxRecord)
+    taxRecords = [TaxRecord(**taxRecord.model_dump()) for taxRecord in taxRecords]
+    db.add_all(taxRecords)
+    db.flush()
+    [db.refresh(taxRecord) for taxRecord in taxRecords]
     db.commit()
-    db.refresh(taxRecord)
-    return taxRecord
+    return taxRecords
 
 def getTaxRecords(db: Session = Depends(getSession)):
     return db.exec(select(TaxRecord)).all()
@@ -22,9 +25,8 @@ def getTaxRecordByHouse(
 ):
     return db.exec(select(TaxRecord).where(TaxRecord.houseId == houseNumber)).all()
 
-# @router.put("/tax-records/{record_id}", response_model=TaxRecordPOSTRequest)
 def updateTaxRecordById(
-    taxRecord: TaxRecordPOSTRequest,
+    taxRecord: TaxRecord,
     db: Session = Depends(getSession),
     admin=Depends(getCurrentAdmin),
 ):
